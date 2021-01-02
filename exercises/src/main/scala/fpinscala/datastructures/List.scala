@@ -12,6 +12,8 @@ object List { // `List` companion object. Contains functions for creating and wo
     println(tail(List(1, 2, 3)))
     println(drop(List(1, 2, 3), 2))
     println(dropWhile(List(2, 2, 3, 4), (x: Int) => x == 2))
+    println(init(List(1, 2, 3)))
+    println(length(List(1, 2, 3)))
   }
 
   def sum(ints: List[Int]): Int = ints match { // A function that uses pattern matching to add up a list of integers
@@ -82,9 +84,17 @@ object List { // `List` companion object. Contains functions for creating and wo
     }
   }
 
-  def init[A](l: List[A]): List[A] = ???
+  def init[A](l: List[A]): List[A] = {
+    l match {
+      case Nil => sys.error("empty list")
+      case Cons(_, Nil) => Nil
+      case Cons(h, t) => Cons(h, init(t))
+    }
+  }
 
-  def length[A](l: List[A]): Int = ???
+  def length[A](l: List[A]): Int = {
+    foldRight(l, 0)((_, len) => len + 1)
+  }
 
   def foldLeft[A,B](l: List[A], z: B)(f: (B, A) => B): B = ???
 
