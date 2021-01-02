@@ -27,6 +27,8 @@ object List { // `List` companion object. Contains functions for creating and wo
     println(filter(List(1, 2, 3, 4))((x) => x % 2 == 0))
     println(flatMap(List(1, 2, 3))(i => List(i, i)))
     println(filter2(List(1, 2, 3, 4))((x) => x % 2 == 0))
+    println(addPairwise(List(1, 2), List(3, 4)))
+    println(zipWith(List(1, 2), List(3, 4))((a, b) => a + b))
   }
 
   def sum(ints: List[Int]): Int = ints match { // A function that uses pattern matching to add up a list of integers
@@ -155,5 +157,21 @@ object List { // `List` companion object. Contains functions for creating and wo
 
   def filter2[A](as: List[A])(f: A => Boolean): List[A] = {
     flatMap(as)((a) => if (f(a)) List(a) else Nil)
+  }
+
+  def addPairwise[A](l1: List[Int], l2: List[Int]): List[Int] = {
+    (l1, l2) match {
+      case (_, Nil) => l1
+      case (Nil, _) => l2
+      case (Cons(h1, t1), Cons(h2, t2)) => Cons(h1 + h2, addPairwise(t1, t2))
+    }
+  }
+
+  def zipWith[A](l1: List[A], l2: List[A])(f: (A, A) => A): List[A] = {
+    (l1, l2) match {
+      case (_, Nil) => l1
+      case (Nil, _) => l2
+      case (Cons(h1, t1), Cons(h2, t2)) => Cons(f(h1, h2), zipWith(t1, t2)(f))
+    }
   }
 }
