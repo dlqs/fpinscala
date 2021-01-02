@@ -24,6 +24,7 @@ object List { // `List` companion object. Contains functions for creating and wo
     println(add1(List(1, 2, 3, 4)))
     println(doubleToString(List(1.0, 2.0, 3.0)))
     println(map(List(1, 2, 3, 4))((x) => x + 1))
+    println(filter(List(1, 2, 3, 4))((x) => x % 2 == 0))
   }
 
   def sum(ints: List[Int]): Int = ints match { // A function that uses pattern matching to add up a list of integers
@@ -140,5 +141,9 @@ object List { // `List` companion object. Contains functions for creating and wo
 
   def map[A,B](l: List[A])(f: A => B): List[B] = {
     foldRight(l, List[B]())((h, acc) => Cons(f(h), acc))
+  }
+
+  def filter[A](as: List[A])(f: A => Boolean): List[A] = {
+    foldRight(as, List[A]())((h, acc) => if (f(h)) Cons(h, acc) else acc)
   }
 }
