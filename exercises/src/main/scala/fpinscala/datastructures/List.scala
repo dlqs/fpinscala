@@ -19,6 +19,8 @@ object List { // `List` companion object. Contains functions for creating and wo
     println(product3(List(1, 2, 3, 4)))
     println(length2(List(1, 2, 3)))
     println(reverse(List(1, 2, 3, 4)))
+    println(append2(List(1, 2), List(3, 4)))
+    println((concat(List(List(1, 2), List(3, 4)))))
   }
 
   def sum(ints: List[Int]): Int = ints match { // A function that uses pattern matching to add up a list of integers
@@ -115,6 +117,14 @@ object List { // `List` companion object. Contains functions for creating and wo
 
   def reverse[A](l: List[A]): List[A] = {
     foldLeft(l, List[A]())((acc, h) => Cons(h, acc))
+  }
+
+  def append2[A](a1: List[A], a2: List[A]): List[A] = {
+    foldRight(a1, a2)((h, acc) => Cons(h, acc))
+  }
+
+  def concat[A](l: List[List[A]]): List[A] = {
+    foldLeft(l, List[A]())(append)
   }
 
   def map[A,B](l: List[A])(f: A => B): List[B] = ???
