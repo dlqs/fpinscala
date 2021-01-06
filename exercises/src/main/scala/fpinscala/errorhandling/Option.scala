@@ -59,6 +59,8 @@ object Option {
     println(s.getOrElse(4))
     println(t.getOrElse(4))
     println(variance(Seq(600, 470, 170, 430, 300))) // 21704
+    println(map2(None, Some(2))((a: Int, b: Int) => a + b))
+    println(map2(Some(3), Some(2))((a: Int, b: Int) => a + b))
   }
   def failingFn(i: Int): Int = {
     val y: Int = throw new Exception("fail!") // `val y: Int = ...` declares `y` as having type `Int`, and sets it equal to the right hand side of the `=`.
@@ -84,7 +86,13 @@ object Option {
     mean(xs) flatMap ((m) => mean(xs map ((x) => math.pow(x - m, 2))))
   }
 
-  def map2[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] = ???
+  def map2[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] = {
+    (a, b) match {
+      case (None, _) => None
+      case (_, None) => None
+      case(Some(s), Some(t)) => Some(f(s, t))
+    }
+  }
 
   def sequence[A](a: List[Option[A]]): Option[List[A]] = ???
 
