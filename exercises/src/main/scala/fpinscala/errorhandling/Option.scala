@@ -61,6 +61,8 @@ object Option {
     println(variance(Seq(600, 470, 170, 430, 300))) // 21704
     println(map2(None, Some(2))((a: Int, b: Int) => a + b))
     println(map2(Some(3), Some(2))((a: Int, b: Int) => a + b))
+    println(sequence(List(Some(1), Some(2))))
+    println(sequence(List(Some(1), None)))
   }
   def failingFn(i: Int): Int = {
     val y: Int = throw new Exception("fail!") // `val y: Int = ...` declares `y` as having type `Int`, and sets it equal to the right hand side of the `=`.
@@ -94,7 +96,12 @@ object Option {
     }
   }
 
-  def sequence[A](a: List[Option[A]]): Option[List[A]] = ???
+  def sequence[A](a: List[Option[A]]): Option[List[A]] = {
+    a match {
+      case Nil => Some(Nil) // empty list does not contain None
+      case h::t => h flatMap (hh => sequence(t) map (hh::_))
+    }
+  }
 
   def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = ???
 }
