@@ -43,7 +43,15 @@ trait Stream[+A] {
 
   def takeWhile1(p: A => Boolean): Stream[A] = foldRight(empty[A])((s, acc) => if (p(s)) cons(s, acc) else acc)
     
-  def headOption: Option[A] = ???
+  def headOption: Option[A] = foldRight(None: Option[A])((h, _) => Some(h))
+
+  def map[B](f: A => B): Stream[B] = foldRight(empty[B])((h, acc) => cons(f(h), acc))
+
+  def filter(p: A => Boolean): Stream[A] = foldRight(empty[A])((h, acc) => if (p(h)) cons(h, acc) else acc)
+
+  def append[B>:A](s: => Stream[B]): Stream[B] = foldRight(this)((h, acc) => cons(h, acc))
+
+  def flatMap[B](f: A => Stream[B]): Stream[B] = foldRight(empty[B])((h, acc) => f(h) append acc)
 
   // 5.7 map, filter, append, flatmap using foldRight. Part of the exercise is
   // writing your own function signatures.
@@ -73,6 +81,12 @@ object Stream {
     println(oneToFive.forAll(_ < 6))
     println(oneToFive.forAll(_ < 5))
     println(oneToFive.takeWhile1(_ <= 3).toList)
+    println(oneToFive.map(_ + 1).toList)
+    println(oneToFive.filter(_ % 2 == 0).toList)
+    println(oneToFive.append(oneToFive).toList)
+    val threeStream: Int => Stream[Int] = ((x: Int) => cons(x, cons(x, cons(x, empty))))
+    println(threeStream(3).toList)
+    println(oneToFive.flatMap(threeStream).toList) // not sure about this one
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
