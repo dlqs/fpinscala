@@ -39,8 +39,10 @@ trait Stream[+A] {
     }
   }
 
-  def forAll(p: A => Boolean): Boolean = ???
+  def forAll(p: A => Boolean): Boolean = foldRight(true)((s, bool) => p(s) && bool)
 
+  def takeWhile1(p: A => Boolean): Stream[A] = foldRight(empty[A])((s, acc) => if (p(s)) cons(s, acc) else acc)
+    
   def headOption: Option[A] = ???
 
   // 5.7 map, filter, append, flatmap using foldRight. Part of the exercise is
@@ -68,6 +70,9 @@ object Stream {
     println(oneToFive.take(4).toList)
     println(oneToFive.take(4).drop(2).toList)
     println(oneToFive.takeWhile(_ <= 3).toList)
+    println(oneToFive.forAll(_ < 6))
+    println(oneToFive.forAll(_ < 5))
+    println(oneToFive.takeWhile1(_ <= 3).toList)
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
