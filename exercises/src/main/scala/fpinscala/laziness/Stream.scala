@@ -32,7 +32,12 @@ trait Stream[+A] {
     }
   }
 
-  def takeWhile(p: A => Boolean): Stream[A] = ???
+  def takeWhile(p: A => Boolean): Stream[A] = {
+    this match {
+      case Cons(h, t) if p(h()) => cons(h(), t().takeWhile(p))
+      case _ => empty
+    }
+  }
 
   def forAll(p: A => Boolean): Boolean = ???
 
@@ -59,8 +64,10 @@ case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
 
 object Stream {
   def main(args: Array[String]): Unit = {
-    println(ones.take(5).toList)
-    println(ones.take(5).drop(2).toList)
+    val oneToFive = cons(1, cons(2, cons(3, cons(4, cons(5, empty)))))
+    println(oneToFive.take(4).toList)
+    println(oneToFive.take(4).drop(2).toList)
+    println(oneToFive.takeWhile(_ <= 3).toList)
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
