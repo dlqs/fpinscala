@@ -63,6 +63,9 @@ object Option {
     println(map2(Some(3), Some(2))((a: Int, b: Int) => a + b))
     println(sequence(List(Some(1), Some(2))))
     println(sequence(List(Some(1), None)))
+    val eightDividedBy = ((x: Int) => if (x != 0) Some(8 / x) else None)
+    println(traverse(List(2, 4))(eightDividedBy))
+    println(traverse(List(2, 0))(eightDividedBy))
   }
   def failingFn(i: Int): Int = {
     val y: Int = throw new Exception("fail!") // `val y: Int = ...` declares `y` as having type `Int`, and sets it equal to the right hand side of the `=`.
@@ -103,5 +106,10 @@ object Option {
     }
   }
 
-  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = ???
+  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = {
+    a match {
+      case Nil => Some(Nil)
+      case h::t => map2(f(h), traverse(t)(f))(_ :: _)
+    }
+  }
 }
