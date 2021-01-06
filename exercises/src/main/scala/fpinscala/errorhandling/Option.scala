@@ -4,20 +4,61 @@ package fpinscala.errorhandling
 import scala.{Option => _, Some => _, Either => _, _} // hide std library `Option`, `Some` and `Either`, since we are writing our own in this chapter
 
 sealed trait Option[+A] {
-  def map[B](f: A => B): Option[B] = ???
+  def map[B](f: A => B): Option[B] = {
+    this match {
+      case None => None
+      case Some(x) => Some(f(x))
+    }
+  }
 
-  def getOrElse[B>:A](default: => B): B = ???
+  def getOrElse[B>:A](default: => B): B = {
+    this match {
+      case None => default
+      case Some(x) => x
+    }
+  }
 
-  def flatMap[B](f: A => Option[B]): Option[B] = ???
+  def flatMap[B](f: A => Option[B]): Option[B] = {
+    this match {
+      case None => None
+      case Some(x) => f(x)
+    }
+  }
 
-  def orElse[B>:A](ob: => Option[B]): Option[B] = ???
+  def orElse[B>:A](ob: => Option[B]): Option[B] = {
+    this match {
+      case None => ob
+      case Some(x) => Some(x)
+    }
+  }
 
-  def filter(f: A => Boolean): Option[A] = ???
+  def filter(f: A => Boolean): Option[A] = {
+    this match {
+      case Some(x) if f(x) => Some(x)
+      case _ => None
+    }
+  }
 }
 case class Some[+A](get: A) extends Option[A]
 case object None extends Option[Nothing]
 
 object Option {
+
+  def main(args: Array[String]): Unit = {
+    val s: Option[Int] = Some(2)
+    // [Int] is needed to pin the type down
+    val t: Option[Int] = None
+    println(s.map(_ + 1))
+    println(t.map(_ + 1))
+    println(s.filter(_ % 2 != 0))
+    println(t.filter(_ % 2 != 0))
+    println(s.flatMap((x) => if (x != 0) Some(8 / x) else None)) // check that we don't divide by zero
+    println(t.flatMap((x) => if (x != 0) Some(8 / x) else None))
+    println(s.orElse(Some(4)))
+    println(t.orElse(Some(4)))
+    println(s.getOrElse(4))
+    println(t.getOrElse(4))
+  }
   def failingFn(i: Int): Int = {
     val y: Int = throw new Exception("fail!") // `val y: Int = ...` declares `y` as having type `Int`, and sets it equal to the right hand side of the `=`.
     try {
