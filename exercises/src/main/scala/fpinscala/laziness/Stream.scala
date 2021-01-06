@@ -17,9 +17,20 @@ trait Stream[+A] {
     case Empty => None
     case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
   }
-  def take(n: Int): Stream[A] = ???
+  def take(n: Int): Stream[A] = {
+    this match {
+      case Cons(h, t) if n > 1 => cons(h(), t().take(n - 1))
+      case Cons(h, _) if n == 1 => cons(h(), empty)
+      case _ => empty
+    }
+  }
 
-  def drop(n: Int): Stream[A] = ???
+  def drop(n: Int): Stream[A] = {
+    this match {
+      case Cons(h, t) if n > 0 => t().drop(n - 1)
+      case _ => this
+    }
+  }
 
   def takeWhile(p: A => Boolean): Stream[A] = ???
 
@@ -31,11 +42,26 @@ trait Stream[+A] {
   // writing your own function signatures.
 
   def startsWith[B](s: Stream[B]): Boolean = ???
+
+  def toList: List[A] = {
+    @annotation.tailrec
+    def helper(s: Stream[A], l: List[A]): List[A] = {
+      s match {
+        case Empty => l
+        case Cons(h, t) => helper(t(), h()::l)
+      }
+    }
+    helper(this, List()).reverse
+  }
 }
 case object Empty extends Stream[Nothing]
 case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
 
 object Stream {
+  def main(args: Array[String]): Unit = {
+    println(ones.take(5).toList)
+    println(ones.take(5).drop(2).toList)
+  }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
     lazy val tail = tl
