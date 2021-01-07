@@ -87,6 +87,7 @@ object Stream {
     val threeStream: Int => Stream[Int] = ((x: Int) => cons(x, cons(x, cons(x, empty))))
     println(threeStream(3).toList)
     println(oneToFive.flatMap(threeStream).toList) // not sure about this one
+    println(ones.take(5).toList)
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
@@ -100,7 +101,10 @@ object Stream {
     if (as.isEmpty) empty 
     else cons(as.head, apply(as.tail: _*))
 
-  val ones: Stream[Int] = Stream.cons(1, ones)
+  def constant[A](a: A): Stream[A] = Stream.cons(a, constant(a))
+
+  val ones: Stream[Int] = constant(1)
+
   def from(n: Int): Stream[Int] = ???
 
   def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = ???
