@@ -47,6 +47,56 @@ trait Stream[+A] {
 
   def map[B](f: A => B): Stream[B] = foldRight(empty[B])((h, acc) => cons(f(h), acc))
 
+  def map1[B](f: A => B): Stream[B] = {
+    unfold(this){ s =>
+      s match {
+        case Cons(h, t) => Some(f(h()), t())
+        case _ => None
+      }
+    }
+  }
+  // unfold(this){case Cons(h, t) => Some((f(h()), t()))}: this will work for an infinite stream but not a finite one
+
+  def take1(n: Int): Stream[A] = {
+    unfold(this){ s =>
+      s match {
+        case Cons(h, t) if n > 1 => Some((h(), t().take1(n - 1)))
+        case Cons(h, _) if n == 1 => Some((h(), empty))
+        case _ => None
+      }
+    }
+  }
+
+  def takeWhile2(p: A => Boolean): Stream[A] = {
+    unfold(this){ s =>
+      s match {
+        case Cons(h, t) if p(h()) => Some((h(), t().takeWhile(p)))
+        case _ => None
+      }
+    }
+  }
+
+  def zipWith[B, C](sb: Stream[B])(f: (A, B) => C): Stream[C] = {
+    unfold((this, sb)){ streams =>
+      streams match {
+        case (Empty, _) => None
+        case (_, Empty) => None
+        case (Cons(h, t), Cons(hb, tb)) => Some(f(h(), hb()), (t(), tb()))
+      }
+    }
+  }
+
+  def zipAll[B](sb: Stream[B]): Stream[(Option[A],Option[B])] = {
+    unfold((this, sb)){ streams =>
+      streams match {
+        case (Empty, Empty) => None
+        case (Empty, Cons(h, t)) => Some(((None, Some(h())), (empty, t())))
+        case (Cons(h, t), Empty) => Some(((Some(h()), None), (t(), empty)))
+        case (Cons(h, t), Cons(hb, tb)) => Some(((Some(h()), Some(hb())), (t(), tb())))
+      }
+    }
+  }
+
   def filter(p: A => Boolean): Stream[A] = foldRight(empty[A])((h, acc) => if (p(h)) cons(h, acc) else acc)
 
   def append[B>:A](s: => Stream[B]): Stream[B] = foldRight(this)((h, acc) => cons(h, acc))
@@ -94,6 +144,12 @@ object Stream {
     println(from1(1).take(5).toList)
     println(constant1(1).take(5).toList)
     println(ones1.take(5).toList)
+
+    println(oneToFive.map1(_ + 1).toList)
+    println(oneToFive.take1(4).toList)
+    println(oneToFive.takeWhile2(_ <= 3).toList)
+    println(oneToFive.take(4).zipWith(oneToFive)(_ + _).toList) // 2 4 6 8
+    println(oneToFive.zipAll(oneToFive.take(4)).toList)
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
