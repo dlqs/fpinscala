@@ -90,6 +90,10 @@ object Stream {
     println(ones.take(5).toList)
     println(from(1).take(5).toList)
     println(fib.take(10).toList)
+    println(fib1.take(10).toList)
+    println(from1(1).take(5).toList)
+    println(constant1(1).take(5).toList)
+    println(ones1.take(5).toList)
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
@@ -116,5 +120,21 @@ object Stream {
     helper(0, 1)
   }
 
-  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = ???
+  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = {
+    f(z) match {
+      case None => empty
+      case Some((a, s)) => cons(a, unfold(s)(f))
+    }
+  }
+
+  // infinite: don't return None
+  def fib1: Stream[Int] = unfold[Int, (Int, Int)]((0, 1)){ case(a: Int, b: Int) => Some((a, (b, a + b))) }
+
+
+  // infinite: don't return None
+  def from1(n: Int): Stream[Int] = unfold(n)(x => Some((x, x + 1)))
+
+  def constant1[A](a: A): Stream[A] = unfold(a)(x => Some((x, x)))
+
+  def ones1: Stream[Int] = unfold(1)(x => Some((x, x)))
 }
