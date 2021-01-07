@@ -106,7 +106,8 @@ trait Stream[+A] {
   // 5.7 map, filter, append, flatmap using foldRight. Part of the exercise is
   // writing your own function signatures.
 
-  def startsWith[B](s: Stream[B]): Boolean = ???
+  // zipAll + takeWhile
+  def startsWith[A](s: Stream[A]): Boolean = zipAll(s).takeWhile(!_._2.isEmpty).forAll{ case (h, h2) => h == h2}
 
   def toList: List[A] = {
     @annotation.tailrec
@@ -150,6 +151,8 @@ object Stream {
     println(oneToFive.takeWhile2(_ <= 3).toList)
     println(oneToFive.take(4).zipWith(oneToFive)(_ + _).toList) // 2 4 6 8
     println(oneToFive.zipAll(oneToFive.take(4)).toList)
+    println(oneToFive.startsWith(ones))
+    println(oneToFive.startsWith(oneToFive.take(3)))
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
