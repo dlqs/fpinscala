@@ -7,6 +7,14 @@ trait RNG {
 
 object RNG {
   // NB - this was called SimpleRNG in the book text
+  def main(args: Array[String]): Unit = {
+    val rng = Simple(1)
+    println(nonNegativeInt(rng))
+    println(double(rng))
+    println(ints(5)(rng))
+    println(double1(rng))
+    println(randIntDouble(rng))
+  }
 
   case class Simple(seed: Long) extends RNG {
     def nextInt: (Int, RNG) = {
@@ -30,9 +38,26 @@ object RNG {
       (f(a), rng2)
     }
 
-  def nonNegativeInt(rng: RNG): (Int, RNG) = ???
+  def nonNegativeInt(rng: RNG): (Int, RNG) = {
+    rng.nextInt match {
+      case (Integer.MIN_VALUE, rng2) => nonNegativeInt(rng2) // call again
+      case (i, rng2) if i >= 0 => (i, rng2)
+      case (i, rng2) if i < 0 => (-1 * i, rng2)
+    }
+  }
 
-  def double(rng: RNG): (Double, RNG) = ???
+  def double(rng: RNG): (Double, RNG) = {
+    val (i, rng2) = nonNegativeInt(rng)
+    (i.toDouble / Integer.MAX_VALUE.toDouble, rng2)
+  }
+
+  def double1: Rand[Double] = {
+    map(nonNegativeInt)(_.toDouble / Integer.MAX_VALUE.toDouble)
+  }
+
+  def both[A, B](ra: Rand[A], rb: Rand[B]): Rand[(A, B)] = map2(ra, rb)((_, _))
+
+  val randIntDouble: Rand[(Int, Double)] = both(int, double)
 
   def intDouble(rng: RNG): ((Int,Double), RNG) = ???
 
@@ -40,9 +65,21 @@ object RNG {
 
   def double3(rng: RNG): ((Double,Double,Double), RNG) = ???
 
-  def ints(count: Int)(rng: RNG): (List[Int], RNG) = ???
+  def ints(count: Int)(rng: RNG): (List[Int], RNG) = {
+    def helper(count: Int, rng: RNG, acc: List[Int]): (List[Int], RNG)= {
+      if (count <= 0) return (acc, rng)
+      val (i, rng2) = rng.nextInt
+      helper(count - 1, rng2, i::acc)
+    }
+    helper(count, rng, List())
+  }
 
-  def map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = ???
+  def map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = 
+    rng => {
+      val (a, rnga) = ra(rng)
+      val (b, rngb) = rb(rnga)
+      (f(a, b), rngb)
+    }
 
   def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = ???
 
