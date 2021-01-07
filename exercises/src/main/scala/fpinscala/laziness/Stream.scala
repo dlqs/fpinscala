@@ -109,6 +109,22 @@ trait Stream[+A] {
   // zipAll + takeWhile
   def startsWith[A](s: Stream[A]): Boolean = zipAll(s).takeWhile(!_._2.isEmpty).forAll{ case (h, h2) => h == h2}
 
+  // 5.15 a little sus, answer doesn't work too. check my flatten
+  def tails: Stream[Stream[A]] = {
+    unfold(this){ s => 
+      s match {
+        case Cons(_, t) => Some((s, t()))
+        case Empty => None
+      }
+    } append empty
+  }
+
+  //def tails: Stream[Stream[A]] =
+  //  unfold(this) {
+  //    case Empty => None
+  //    case s => Some((s, s drop 1))
+  //  } append Stream(empty)
+
   def toList: List[A] = {
     @annotation.tailrec
     def helper(s: Stream[A], l: List[A]): List[A] = {
@@ -153,6 +169,7 @@ object Stream {
     println(oneToFive.zipAll(oneToFive.take(4)).toList)
     println(oneToFive.startsWith(ones))
     println(oneToFive.startsWith(oneToFive.take(3)))
+    println(((empty.tails)).toList)
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
@@ -196,4 +213,8 @@ object Stream {
   def constant1[A](a: A): Stream[A] = unfold(a)(x => Some((x, x)))
 
   def ones1: Stream[Int] = unfold(1)(x => Some((x, x)))
+
+  def flatten[A](ss: Stream[Stream[A]]): Stream[A] = {
+    ss.foldRight(empty[A])((h, acc) => h append acc)
+  }
 }
