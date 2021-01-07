@@ -89,6 +89,7 @@ object Stream {
     println(oneToFive.flatMap(threeStream).toList) // not sure about this one
     println(ones.take(5).toList)
     println(from(1).take(5).toList)
+    println(fib.take(10).toList)
   }
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
     lazy val head = hd
@@ -107,6 +108,13 @@ object Stream {
   val ones: Stream[Int] = constant(1)
 
   def from(n: Int): Stream[Int] = Stream.cons(n, from(n + 1))
+
+  def fib: Stream[Int] = {
+    def helper(a: Int, b: Int): Stream[Int] = {
+      cons(a, helper(b, a + b))
+    }
+    helper(0, 1)
+  }
 
   def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = ???
 }
