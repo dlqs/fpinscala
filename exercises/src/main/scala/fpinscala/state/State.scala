@@ -97,11 +97,15 @@ object RNG {
     }
   }
 
-  def nonNegativeLessThan(n: Int): Rand[Int] = { rng =>
+  def nonNegativeLessThan(n: Int): Rand[Int] =
     flatMap(nonNegativeInt){ i => 
-      
+      var mod = i % n
+      if (i + (n-1) - mod >= 0) {
+        unit(mod)
+      } else {
+        nonNegativeLessThan(n)
+      }
     }
-  }
 }
 
 case class State[S,+A](run: S => (A, S)) {
