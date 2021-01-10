@@ -90,7 +90,18 @@ object RNG {
     sequence(List.fill(count)(int))
   }
 
-  def flatMap[A,B](f: Rand[A])(g: A => Rand[B]): Rand[B] = ???
+  def flatMap[A,B](f: Rand[A])(g: A => Rand[B]): Rand[B] = {
+    rng => {
+      val (a, rng2) = f(rng) 
+      g(a)(rng2) // IDGI why do I need to call with rng2?
+    }
+  }
+
+  def nonNegativeLessThan(n: Int): Rand[Int] = { rng =>
+    flatMap(nonNegativeInt){ i => 
+      
+    }
+  }
 }
 
 case class State[S,+A](run: S => (A, S)) {
