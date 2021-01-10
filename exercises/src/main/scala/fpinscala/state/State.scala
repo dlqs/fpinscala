@@ -14,6 +14,7 @@ object RNG {
     println(ints(5)(rng))
     println(double1(rng))
     println(randIntDouble(rng))
+    println(double_2(rng))
   }
 
   case class Simple(seed: Long) extends RNG {
@@ -106,6 +107,20 @@ object RNG {
         nonNegativeLessThan(n)
       }
     }
+  
+  def mapWithFlatMap[A,B](s: Rand[A])(f: A => B): Rand[B] =
+    flatMap(s){ a => unit(f(a)) }
+
+  def double_2: Rand[Double] = {
+    mapWithFlatMap(nonNegativeInt)(_.toDouble / Integer.MAX_VALUE.toDouble)
+  }
+
+  def map2WithFlatMap[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = 
+    flatMap(ra){ a => {
+      map(rb){ b => { // this function returns a C. if this were flatmap instead, it would return a  Rand[C], which we don't want.
+        f(a, b)
+      }}
+    }}
 }
 
 case class State[S,+A](run: S => (A, S)) {
