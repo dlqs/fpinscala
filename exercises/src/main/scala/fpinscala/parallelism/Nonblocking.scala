@@ -1,10 +1,19 @@
 package fpinscala.parallelism
 
-import java.util.concurrent.{Callable, CountDownLatch, ExecutorService}
+import java.util.concurrent.{Executors, Callable, CountDownLatch, ExecutorService}
 import java.util.concurrent.atomic.AtomicReference
 import language.implicitConversions
 
 object Nonblocking {
+  def main(args: Array[String]) {
+
+    println("start")
+    val S = Executors.newFixedThreadPool(1)
+    val c = Par.choiceN(Par.unit(1))(List(Par.unit("a"), Par.unit("b")))
+    println(Par.run(S)(c))
+    println("Done!")
+    S.shutdown()
+  }
 
   trait Future[+A] {
     private[parallelism] def apply(k: A => Unit): Unit
@@ -18,6 +27,7 @@ object Nonblocking {
       val ref = new java.util.concurrent.atomic.AtomicReference[A] // A mutable, threadsafe reference, to use for storing the result
       val latch = new CountDownLatch(1) // A latch which, when decremented, implies that `ref` has the result
       p(es) { a => ref.set(a); latch.countDown } // Asynchronously set the result, and decrement the latch
+      println("set async callback")
       latch.await // Block until the `latch.countDown` is invoked asynchronously
       ref.get // Once we've passed the latch, we know `ref` has been set, and return its value
     }
@@ -131,13 +141,24 @@ object Nonblocking {
           }
       }
 
-    def choiceN[A](p: Par[Int])(ps: List[Par[A]]): Par[A] = ???
+    def choiceN[A](p: Par[Int])(ps: List[Par[A]]): Par[A] =
+      es => new Future[A] {
+        def apply(cb: A => Unit): Unit =
+          p(es) { i =>
+            eval(es) { ps(i)(es)(cb) }
+          }
+      }
 
     def choiceViaChoiceN[A](a: Par[Boolean])(ifTrue: Par[A], ifFalse: Par[A]): Par[A] =
       ???
 
     def choiceMap[K,V](p: Par[K])(ps: Map[K,Par[V]]): Par[V] =
-      ???
+      es => new Future[V] {
+        def apply(cb: V => Unit): Unit =
+          p(es) { i =>
+            eval(es) { ps(i)(es)(cb) }
+          }
+      }
 
     // see `Nonblocking.scala` answers file. This function is usually called something else!
     def chooser[A,B](p: Par[A])(f: A => Par[B]): Par[B] =
