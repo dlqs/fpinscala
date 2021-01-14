@@ -21,7 +21,8 @@ object Par {
     def isDone = a.isDone && b.isDone
     def isCancelled = a.isCancelled || b.isCancelled
     def cancel(evenIfRunning: Boolean): Boolean = a.cancel(evenIfRunning) && b.cancel(evenIfRunning)
-    def get(timeout: Long, units: TimeUnit): A = {
+    def get(): C = f(a.get, b.get)
+    def get(timeout: Long, units: TimeUnit): C = {
       val start = System.currentTimeMillis()
       val ar = a.get(timeout, units)
       val br = b.get(TimeUnit.MILLISECONDS.convert(timeout, units) - (System.currentTimeMillis() - start), TimeUnit.MILLISECONDS)
@@ -34,10 +35,10 @@ object Par {
     (a) => lazyUnit(f(a))
   }
 
-  def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] = {
-      // Units 
-      asyncF(filter(f))(as)
-  }
+  //def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] = {
+  //    // Units 
+  //    asyncF(filter(f))(as)
+  //}
   
   // map2(fork(a), fork(b))
   // map2(a, b)
