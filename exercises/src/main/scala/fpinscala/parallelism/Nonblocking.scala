@@ -162,10 +162,24 @@ object Nonblocking {
 
     // see `Nonblocking.scala` answers file. This function is usually called something else!
     def chooser[A,B](p: Par[A])(f: A => Par[B]): Par[B] =
-      ???
+      (es) => new Future[B] {
+        def apply(cb: B => Unit): Unit = 
+          p(es) {
+           a => eval(es) {
+             f(a)(es)(cb)
+            }
+          }
+      }
 
     def flatMap[A,B](p: Par[A])(f: A => Par[B]): Par[B] =
-      ???
+      (es) => new Future[B] {
+        def apply(cb: B => Unit): Unit = 
+          p(es) {
+           a => eval(es) {
+             f(a)(es)(cb)
+            }
+          }
+      }
 
     def choiceViaChooser[A](p: Par[Boolean])(f: Par[A], t: Par[A]): Par[A] =
       ???
@@ -174,13 +188,18 @@ object Nonblocking {
       ???
 
     def join[A](p: Par[Par[A]]): Par[A] =
-      ???
+      (es) => new Future[A] {
+        def apply(cb: A => Unit): Unit = 
+          p(es) {
+            pa => pa(es)(cb)
+          }
+      }
 
     def joinViaFlatMap[A](a: Par[Par[A]]): Par[A] =
-      ???
+      flatMap(a)(pa => pa)
 
     def flatMapViaJoin[A,B](p: Par[A])(f: A => Par[B]): Par[B] =
-      ???
+      join(map(p)(f))
 
     /* Gives us infix syntax for `Par`. */
     implicit def toParOps[A](p: Par[A]): ParOps[A] = new ParOps(p)
