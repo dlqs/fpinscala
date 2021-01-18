@@ -34,23 +34,33 @@ object Gen {
   def boolean: Gen[Boolean] = {
     choose(0, 2).map((x: Int) => x == 0)
   }
-
-  
   def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = {
-    def helper(count: Int, rng: RNG, acc: List[A]): (List[A], RNG)= {
-      if (count <= 0) return (acc, rng)
-      val (i, rng2) = g.sample.run(rng)
-      helper(count - 1, rng2, i::acc)
-    }
-    Gen(State((rng) => helper(n, rng ,List())))
+    if (n <= 0) return unit(List())
+    g.map2(listOfN(n - 1, g))((a, acc) => a::acc)
   }
-
 }
 
 
 case class Gen[A] (sample: State[RNG, A]) {
-  def map[A,B](f: A => B): Gen[B] = ???
-  def flatMap[A,B](f: A => Gen[B]): Gen[B] = ???
+  def map[B](f: A => B): Gen[B] =  {
+    Gen( 
+      sample.map(f)
+    )
+  }
+
+  def map2[B, C](genB: Gen[B])(f: (A, B) => C) = {
+    flatMap(a => genB.map(b => f(a, b)))
+  }
+
+  def flatMap[B](f: A => Gen[B]): Gen[B] = {
+    Gen(
+      sample.flatMap(a => f(a).sample)
+    )
+  }
+
+  def listOfN(size: Gen[Int]): Gen[List[A]] = {
+    size.flatMap(n => Gen.listOfN(n, this))
+  }
 }
 
 //case class Gen[A] extends Gen[A](sample: State[RNG, A])
