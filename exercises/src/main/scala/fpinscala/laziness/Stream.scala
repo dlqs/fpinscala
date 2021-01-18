@@ -97,6 +97,10 @@ trait Stream[+A] {
     }
   }
 
+  def zip[B](s2: Stream[B]): Stream[(A,B)] =
+    zipWith(s2)((_,_))
+
+
   def filter(p: A => Boolean): Stream[A] = foldRight(empty[A])((h, acc) => if (p(h)) cons(h, acc) else acc)
 
   def append[B>:A](s: => Stream[B]): Stream[B] = foldRight(this)((h, acc) => cons(h, acc))
