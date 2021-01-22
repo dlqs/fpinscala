@@ -166,16 +166,31 @@ object Monoid {
   }
 
   def productMonoid[A,B](A: Monoid[A], B: Monoid[B]): Monoid[(A, B)] =
-    ???
+    new Monoid[(A, B)] {
+      def op(l: (A, B), r: (A, B)): (A, B) = (l, r) match { 
+        case ((a_l, b_l), (a_r, b_r)) => (A.op(a_l, a_r), B.op(b_l, b_r))
+      }
+      def zero = (A.zero, B.zero)
+    }
 
   def functionMonoid[A,B](B: Monoid[B]): Monoid[A => B] =
-    ???
+    new Monoid[A => B] {
+      def op(l: A => B, r: A => B): A => B = a => B.op(l(a), r(a))
+      def zero = _ => B.zero
+    }
 
   def mapMergeMonoid[K,V](V: Monoid[V]): Monoid[Map[K, V]] =
-    ???
+    new Monoid[Map[K, V]] {
+      def op(a: Map[K, V], b: Map[K, V]): Map[K,V] = 
+        (a.keySet ++ b.keySet).foldLeft(zero){ (acc, k) => 
+          acc.updated(k, V.op(a.getOrElse(k, V.zero),
+                              b.getOrElse(k, V.zero)))
+        }
+      def zero = Map[K, V]()
+    }
 
   def bag[A](as: IndexedSeq[A]): Map[A, Int] =
-    ???
+    IndexedSeqFoldable.foldMap(as)(a => Map(a -> 1))(mapMergeMonoid(intAddition))
 }
 
 trait Foldable[F[_]] {
@@ -194,16 +209,16 @@ trait Foldable[F[_]] {
     ???
 
   def toList[A](as: F[A]): List[A] =
-    ???
+    foldRight(as)(List[A]())((a, b) => a :: b)
 }
-
+//
 object ListFoldable extends Foldable[List] {
   override def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B) =
-    ???
+    as.foldRight(z)(f)
   override def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B) =
-    ???
+    as.foldLeft(z)(f)
   override def foldMap[A, B](as: List[A])(f: A => B)(mb: Monoid[B]): B =
-    ???
+    as.map(f).foldLeft(mb.zero)(mb.op)
 }
 
 object IndexedSeqFoldable extends Foldable[IndexedSeq] {
@@ -217,9 +232,9 @@ object IndexedSeqFoldable extends Foldable[IndexedSeq] {
 
 object StreamFoldable extends Foldable[Stream] {
   override def foldRight[A, B](as: Stream[A])(z: B)(f: (A, B) => B) =
-    ???
+    as.foldRight(z)(f)
   override def foldLeft[A, B](as: Stream[A])(z: B)(f: (B, A) => B) =
-    ???
+    as.foldLeft(z)(f)
 }
 
 sealed trait Tree[+A]
@@ -228,19 +243,47 @@ case class Branch[A](left: Tree[A], right: Tree[A]) extends Tree[A]
 
 object TreeFoldable extends Foldable[Tree] {
   override def foldMap[A, B](as: Tree[A])(f: A => B)(mb: Monoid[B]): B =
-    ???
-  override def foldLeft[A, B](as: Tree[A])(z: B)(f: (B, A) => B) =
-    ???
+    as match {
+      case Leaf(a) => f(a)
+      case Branch(l, r) => mb.op(foldMap(l)(f)(mb), foldMap(r)(f)(mb))
+    }
+
+    /**
+      *      5
+      *   10   2
+      *  b => a => b
+      * (a / b) / c vs a / (b / c)
+      */
+  //   a
+  //  / \
+  // b   c
+  override def foldLeft[A, B](as: Tree[A])(z: B)(f: (B, A) => B): B =
+    as match {
+      case Leaf(a) => f(z, a)
+      case Branch(l, r) => foldLeft(r)(foldLeft(l)(z)(f))(f)
+    }
   override def foldRight[A, B](as: Tree[A])(z: B)(f: (A, B) => B) =
-    ???
+    as match {
+      case Leaf(a) => f(a, z)
+      case Branch(l, r) => foldRight(l)(foldRight(r)(z)(f))(f)
+    }
 }
 
 object OptionFoldable extends Foldable[Option] {
   override def foldMap[A, B](as: Option[A])(f: A => B)(mb: Monoid[B]): B =
-    ???
+    as match {
+      case Some(a) => f(a)
+      case None => mb.zero
+    }
   override def foldLeft[A, B](as: Option[A])(z: B)(f: (B, A) => B) =
-    ???
+    as match {
+      case Some(a) => f(z, a)
+      case None => z   
+    }
   override def foldRight[A, B](as: Option[A])(z: B)(f: (A, B) => B) =
-    ???
+    as match {
+      case Some(a) => f(a, z)
+      case None => z   
+    }
 }
 
