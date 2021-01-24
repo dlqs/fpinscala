@@ -36,21 +36,36 @@ trait Monad[M[_]] extends Functor[M] {
   def map2[A,B,C](ma: M[A], mb: M[B])(f: (A, B) => C): M[C] =
     flatMap(ma)(a => map(mb)(b => f(a, b)))
 
-  def sequence[A](lma: List[M[A]]): M[List[A]] = ???
+  def sequence[A](lma: List[M[A]]): M[List[A]] = {
+    lma.foldRight(unit(List[A]()))((b, m) => map2(b, m)((a, l) => a::l))
+  }
 
-  def traverse[A,B](la: List[A])(f: A => M[B]): M[List[B]] = ???
+  def traverse[A,B](la: List[A])(f: A => M[B]): M[List[B]] = sequence(la.map(f))
 
-  def replicateM[A](n: Int, ma: M[A]): M[List[A]] = ???
+  def replicateM[A](n: Int, ma: M[A]): M[List[A]] = {
+    sequence(List.fill(n)(ma))
+  }
 
-  def compose[A,B,C](f: A => M[B], g: B => M[C]): A => M[C] = ???
+  def filterM[A](ms: List[A])(f: A => M[Boolean]): M[List[A]] = {
+    ms.foldRight(unit(List[A]()))((a, m) => map2(f(a), m)((a_res, l) => if (a_res) a::l else l))
+  }
+
+  def compose[A,B,C](f: A => M[B], g: B => M[C]): A => M[C] = a => flatMap(f(a))(g)
 
   // Implement in terms of `compose`:
-  def _flatMap[A,B](ma: M[A])(f: A => M[B]): M[B] = ???
+  def _flatMap[A,B](ma: M[A])(f: A => M[B]): M[B] = compose(((_:Unit) => ma), f)()
 
-  def join[A](mma: M[M[A]]): M[A] = ???
+  def join[A](mma: M[M[A]]): M[A] = {
+    flatMap(mma)((id:M[A]) => id)
+  }
 
   // Implement in terms of `join`:
-  def __flatMap[A,B](ma: M[A])(f: A => M[B]): M[B] = ???
+  def __flatMap[A,B](ma: M[A])(f: A => M[B]): M[B] = join(map(ma)(f))
+
+  def __compose[A,B,C](f: A => M[B], g: B => M[C]): A => M[C] = {
+    a => join(map(f(a))(g))
+  }
+
 }
 
 case class Reader[R, A](run: R => A)
@@ -77,11 +92,7 @@ object Monad {
     }
   }
 
-
-  def stateMonad[S]: Monad[SMon[S]] = new Monad[SMon[S]] {
-    def unit[A](a: => A) = (s: S) => (a, s)
-    override def flatMap[A, B](ma: State[S, A])(f: A => State[S, B]): State[S, B] = ma flatMap f
-  }
+  def stateMonad[S] = ???
 
   val idMonad: Monad[Id] = ???
 
