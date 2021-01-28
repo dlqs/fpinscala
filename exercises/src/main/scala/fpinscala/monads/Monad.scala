@@ -100,14 +100,22 @@ object Monad {
 }
 
 case class Id[A](value: A) {
-  def map[B](f: A => B): Id[B] = ???
-  def flatMap[B](f: A => Id[B]): Id[B] = ???
+  def map[B](f: A => B): Id[B] = Id(f(value))
+  def flatMap[B](f: A => Id[B]): Id[B] = f(value)
 }
 
 object Reader {
   def readerMonad[R] = new Monad[({type f[x] = Reader[R,x]})#f] {
-    def unit[A](a: => A): Reader[R,A] = ???
-    override def flatMap[A,B](st: Reader[R,A])(f: A => Reader[R,B]): Reader[R,B] = ???
+    override def join[A](rr: Reader[R, Reader[R, A]]): Reader[R, A] = {
+      Reader(r => rr.run(r).run(r))
+    }
+    def unit[A](a: => A): Reader[R,A] = Reader(_ => a)
+    override def flatMap[A,B](st: Reader[R,A])(f: A => Reader[R,B]): Reader[R,B] = {
+      Reader(r => {
+        val a = st.run(r)
+        f(a).run(r)
+      })
+    }
   }
 }
 
