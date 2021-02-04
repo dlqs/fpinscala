@@ -109,7 +109,17 @@ object Monad {
   }
 
   def composeM[F[_],N[_]](implicit F: Monad[F], N: Monad[N], T: Traverse[N]):
-    Monad[({type f[x] = F[N[x]]})#f] = ???
+    Monad[({type f[x] = F[N[x]]})#f] = {
+      new Monad[({type f[x] = F[N[x]]})#f] {
+        override def unit[A](a: => A): F[N[A]] = F.unit(N.unit(a))
+
+        override def join[A](mma: F[N[F[N[A]]]]): F[N[A]] = {
+          val ffnna = F.map(mma)(T.sequence(_)) // 
+          val fnna = F.join(ffnna)
+          F.map(fnna)(N.join(_))
+        }
+      }
+    }
 }
 
 sealed trait Validation[+E, +A]
@@ -179,10 +189,7 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
       //case None => throw new Exception()
     }
   }
-
-
-
-
+  
   override def foldMap[A,B](as: F[A])(f: A => B)(mb: Monoid[B]): B =
     traverse[({type f[x] = Const[B,x]})#f,A,Nothing](
       as)(f)(monoidApplicative(mb))
@@ -203,21 +210,34 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
   def zipWithIndex[A](fa: F[A]): F[(A, Int)] =
     mapAccum(fa, 0)((a, s) => ((a, s), s + 1))._1
 
-  def reverse[A](fa: F[A]): F[A] =  {
+  def reverse[A](fa: F[A]): F[A] =  ???
 
-    traverseS(fa)((a: A) => (for {
-      as <- get[List[A]]
-      _ <-set(a::as)
-    } yield ()).run(Nil)._2
-
+  override def foldLeft[A,B](fa: F[A])(z: B)(f: (B, A) => B): B = {
+    mapAccum(fa, z)((a, b) => ((), f(b, a)))._2
   }
 
-  override def foldLeft[A,B](fa: F[A])(z: B)(f: (B, A) => B): B = ???
-
   def fuse[G[_],H[_],A,B](fa: F[A])(f: A => G[B], g: A => H[B])
-                         (implicit G: Applicative[G], H: Applicative[H]): (G[F[B]], H[F[B]]) = ???
+                         (implicit ga: Applicative[G], ha: Applicative[H]): (G[F[B]], H[F[B]]) = {
+    implicit val GH = ga.product(ha)
+    traverse[({type f[x] = (G[x], H[x])})#f,A,B](fa)(a => (f(a), g(a)))
+  }
 
-  def compose[G[_]](implicit G: Traverse[G]): Traverse[({type f[x] = F[G[x]]})#f] = ???
+  def compose[G[_]](implicit G: Traverse[G]): Traverse[({type f[x] = F[G[x]]})#f] = {
+    type H[X] = F[G[X]]
+    val self = this
+    new Traverse[H] {
+      override def traverse[J[_]:Applicative,A,B](fa: H[A])(f: A => J[B]): J[H[B]] = {
+        //original: traverse[G[_]:Applicative,A,B](fa: F[A])(f: A => G[B]): G[F[B]]
+        // fa : F[G[A]]
+        // ga : G[A]
+        // 
+        // self.traverse(F[G[A]])(G[A] => J[G[Y]]): J[F[G[Y]]]
+        // G.traverse(G[X])(X => J[Y]): J[G[Y]]
+        
+        self.traverse(fa)(ga => G.traverse(ga)(f))
+      }
+    }
+  }
 }
 
 object Traverse {
