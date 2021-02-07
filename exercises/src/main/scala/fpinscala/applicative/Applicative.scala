@@ -61,7 +61,6 @@ trait Applicative[F[_]] extends Functor[F] {
   def compose[G[_]](g: Applicative[G]): Applicative[({type f[x] = F[G[x]]})#f] = {
     type H[A] = F[G[A]]
     val f = this
-
     new Applicative[H] {
       def unit[A](a: => A) = f.unit(g.unit(a))
       override def apply[A, B](hab: H[A => B])(ha: H[A]): H[B] = {
@@ -90,8 +89,6 @@ trait Monad[F[_]] extends Applicative[F] {
 
   override def apply[A,B](mf: F[A => B])(ma: F[A]): F[B] =
     flatMap(mf)(f => map(ma)(a => f(a)))
-
-
 }
 
 object Monad {
@@ -154,7 +151,7 @@ object Applicative {
     }
     def unit[A](a : => A):Validation[E, A]  = Success(a)
   }
-  }
+}
 
   implicit val optionApplicative = new Applicative[Some] {
     def unit[A](a: => A): Some[A] = Some(a)
