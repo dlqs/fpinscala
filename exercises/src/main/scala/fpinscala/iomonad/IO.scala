@@ -184,7 +184,7 @@ object IO2a {
   }
 
   def printLine(s: String): IO[Unit] =
-    Suspend(() => Return(println(s)))
+    Suspend(() => println(s))
 
   val p = IO.forever(printLine("Still going..."))
 
@@ -372,14 +372,39 @@ object IO3 {
                                f: A => Free[F, B]) extends Free[F, B]
 
   // Exercise 1: Implement the free monad
-  def freeMonad[F[_]]: Monad[({type f[a] = Free[F,a]})#f] = ???
+  def freeMonad[F[_]]: Monad[({type f[a] = Free[F,a]})#f] = 
+    new Monad[({type f[a] = Free[F,a]})#f] {
+      def unit[A](a: => A): Free[F, A] = Return(a)
+      def flatMap[A, B](a: Free[F,A])(f: A => Free[F,B]): Free[F,B] = a.flatMap(f)
+    }
 
   // Exercise 2: Implement a specialized `Function0` interpreter.
-  // @annotation.tailrec
-  def runTrampoline[A](a: Free[Function0,A]): A = ???
+  // runTrampoline(FlatMap(FlatMap(s2, f2), f))
+  // runTrampoline(FlatMap(s2, (new_s => FlatMap(f2(new_s), (f))))
+  //@annotation.tailrec
+  def runTrampoline[A](a: Free[Function0,A]): A = {
+    a match {
+      case Return(r) => r
+      case Suspend(s) => s()
+      // f(self.run).run
+      // case FlatMap(s, f) => runTrampoline(f(runTrampoline(s)))
+      case FlatMap(s, f) => s match {
+        case Return(r) => runTrampoline(f(r))
+        case Suspend(s2) => runTrampoline(f(s2()))
+        // FlatMap(FlatMap(s2, f2), f)
+        case FlatMap(s2, f2) =>  runTrampoline(s2 flatMap (new_s => f2(new_s) flatMap f))
+      }
+    }
+  }
 
   // Exercise 3: Implement a `Free` interpreter which works for any `Monad`
-  def run[F[_],A](a: Free[F,A])(implicit F: Monad[F]): F[A] = ???
+  def run[F[_],A](a: Free[F,A])(implicit F: Monad[F]): F[A] = a match {
+    case Return(a) => F.unit(a)
+    case Suspend(a) => a
+    case FlatMap(Return(a), f) => run(f(a))
+    case FlatMap(Suspend(s), f) => F.flatMap(s)(b => run(f(b)))
+    case FlatMap(FlatMap(a, f1), f2) => run(a flatMap (b => f1(b) flatMap f2))
+  }
 
   // return either a `Suspend`, a `Return`, or a right-associated `FlatMap`
   // @annotation.tailrec
