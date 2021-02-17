@@ -55,7 +55,7 @@ object ST {
     }
   }
   def runST[A](st: RunnableST[A]): A =
-    st[Null].run(null)._1
+    st.apply[Unit].run(())._1
 }
 
 sealed trait STRef[S,A] {
@@ -78,6 +78,21 @@ object STRef {
 trait RunnableST[A] {
   def apply[S]: ST[S,A]
 }
+/*
+val p = new RunnableST[(Int, Int) /* A */] { 
+  def apply[S] = for { // ST[S,A]
+    r1 <- STRef(1) // ST[S, STRef[S, Int]], r1 = STRef[S, Int]
+    r2 <- STRef(2)
+    x  <- r1.read  // ST[S, Int] x = Int
+    y <- r2.read  
+    _ <- r1.write(y+1)
+    _ <- r2.write(x+1)
+    _ <- r1.read  
+    b <- r2.read
+  } yield (a,b)
+}
+// p.apply[S]()
+*/
 
 // Scala requires an implicit Manifest for constructing arrays.
 sealed abstract class STArray[S,A](implicit manifest: Manifest[A]) {
@@ -98,8 +113,13 @@ sealed abstract class STArray[S,A](implicit manifest: Manifest[A]) {
   // Turn the array into an immutable list
   def freeze: ST[S,List[A]] = ST(value.toList)
 
-  def fill(xs: Map[Int,A]): ST[S,Unit] = ???
-
+  def fill(xs: Map[Int,A]): ST[S,Unit] = {
+    for ((i, a) <- xs) {
+      write(i, a)
+    }
+    ST(())
+  }
+  
   def swap(i: Int, j: Int): ST[S,Unit] = for {
     x <- read(i)
     y <- read(j)
@@ -124,9 +144,57 @@ object STArray {
 object Immutable {
   def noop[S] = ST[S,Unit](())
 
-  def partition[S](a: STArray[S,Int], l: Int, r: Int, pivot: Int): ST[S,Int] = ???
+  def partition[S](arr: STArray[S,Int], l: Int, r: Int, pivot: Int): ST[S,Int] = {
+    // def partition_imperatively(arr: Array[Int], l: Int, r: Int, pivot: Int): ST[S, Int] = {
+    //   val pivot_value = arr(pivot)
+    //   var part_index = l
+    //   arr(l) = arr(pivot)
+    //   arr(pivot) = pivot_value
+    //   for (i <- l to r) {
+    //     val val_i = arr(i)
+    
+    // //_ <- (l until r).foldLeft(noop[S])((s, i) => for {
+    //     if (val_i < pivot_value) {
+    //       var temp = arr(i) 
+    //       arr(i) = arr(part_index)
+    //       arr(part_index) = temp
+    //       part_index += 1
+    //     }
+    //   }
+    //   arr(l) = arr(part_index)
+    //   arr(part_index) = pivot_value 
+ 
+    //   ST(part_index)
+    // }
+ 
+    for {
+      pivot_value <- arr.read(pivot)
+      part_index <- STRef(l)
+      _ <- arr.swap(l, pivot)
+      _ <- (l until r).foldLeft(noop[S])((s, i) => for {
+        val_i <- arr.read(i)
+        _ <- {
+          if (val_i >= pivot_value) noop[S]
+          else
+          for {
+            idx <- part_index.read
+            _ <- arr.swap(i, idx)
+            _ <- part_index.write(idx + 1)
+          } yield ()
+        }
+      } yield ())
+      new_part_index <- part_index.read
+      _ <- arr.swap(l, new_part_index)
+    } yield new_part_index
+  }
 
-  def qs[S](a: STArray[S,Int], l: Int, r: Int): ST[S, Unit] = ???
+  def qs[S](a: STArray[S,Int], l: Int, r: Int): ST[S, Unit] = {
+    for {
+      p <- partition(a, l, r, (l + r)/ 2)
+      _ <- qs(a, l, p -1)
+      _ <- qs(a, p + 1, r)
+    } yield ()
+  }
 
   def quicksort(xs: List[Int]): List[Int] =
     if (xs.isEmpty) xs else ST.runST(new RunnableST[List[Int]] {

@@ -381,7 +381,7 @@ object IO3 {
   // Exercise 2: Implement a specialized `Function0` interpreter.
   // runTrampoline(FlatMap(FlatMap(s2, f2), f))
   // runTrampoline(FlatMap(s2, (new_s => FlatMap(f2(new_s), (f))))
-  //@annotation.tailrec
+  @annotation.tailrec
   def runTrampoline[A](a: Free[Function0,A]): A = {
     a match {
       case Return(r) => r
@@ -515,9 +515,17 @@ object IO3 {
   // Exercise 4 (optional, hard): Implement `runConsole` using `runFree`,
   // without going through `Par`. Hint: define `translate` using `runFree`.
 
-  def translate[F[_],G[_],A](f: Free[F,A])(fg: F ~> G): Free[G,A] = ???
+  def translate[F[_],G[_],A](f: Free[F,A])(fg: F ~> G): Free[G,A] = {    
+    //Suspend((runFree(f)(fg)))
+    // runFree(Free[F,A])(F ~> Free[G,A])(freeMonad[G] : Monad[Free[G, a]])
+    type FreeG[A] = Free[G, A]
+    runFree(f)(new (F ~> FreeG) { def apply[A](a: F[A]) = Suspend(fg(a)) })(freeMonad[G])
+  
+  }
 
-  def runConsole[A](a: Free[Console,A]): A = ???
+  def runConsole[A](a: Free[Console,A]): A = {
+    runTrampoline(translate(a)(consoleToFunction0))
+  }
 
   /*
   There is nothing about `Free[Console,A]` that requires we interpret
