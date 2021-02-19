@@ -114,6 +114,7 @@ sealed abstract class STArray[S,A](implicit manifest: Manifest[A]) {
   def freeze: ST[S,List[A]] = ST(value.toList)
 
   def fill(xs: Map[Int,A]): ST[S,Unit] = {
+    // xs.toList.foldLeft(ST(()))((s, kv) => k match { case (i, a) => s.flatMap(write(i,a)) })
     for ((i, a) <- xs) {
       write(i, a)
     }
@@ -209,3 +210,33 @@ object Immutable {
 
 import scala.collection.mutable.HashMap
 
+sealed trait STMap[S, K, V] {
+  protected var hmap: HashMap[K, V]
+  def size: ST[S,Int] = ST(hmap.size)
+
+  // Write a value at the give index of the array
+  def put(k: K, v: V): ST[S,Unit] = new ST[S,Unit] {
+    def run(s: S) = {
+      hmap.put(k, v)
+      ((), s)
+    }
+  }
+
+  def get(k: K): ST[S,V] = ST(hmap(k))
+}
+
+object STMap {
+  def empty[S, K,V]: ST[S, STMap[S,K,V]] = 
+    ST(new STMap[S,K,V] { 
+      var hmap = new HashMap[K, V]() 
+    })
+
+  def fromAssocList[S, K,V](assocList: List[(K,V)]): ST[S, STMap[S,K,V]] =
+    assocList.foldLeft(empty[S,K,V])((m, kv) => kv match {
+      case (k, v) => 
+        for {
+          map <- m
+          _ <- map.put(k,v)
+        } yield map
+    })
+}

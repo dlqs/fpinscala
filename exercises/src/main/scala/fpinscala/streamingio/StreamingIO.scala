@@ -292,13 +292,40 @@ object SimpleStreamTransducers {
     /*
      * Exercise 1: Implement `take`, `drop`, `takeWhile`, and `dropWhile`.
      */
-    def take[I](n: Int): Process[I,I] = ???
+    def take[I](n: Int): Process[I,I] = {
+      // take(n, _list)
+      if (n==0) {
+        Halt()
+      } else {
+        Await {
+          case Some(x) => Emit(x, take(n-1))
+          case None => Halt()
+        }
+      }
+    }
 
-    def drop[I](n: Int): Process[I,I] = ???
+    def drop[I](n: Int): Process[I,I] = {
+       if (n==0) {
+         id
+      } else {
+        Await {
+          case Some(_) => drop(n-1)
+          case None => Halt()
+        }
+      }
+    }
 
-    def takeWhile[I](f: I => Boolean): Process[I,I] = ???
+    def takeWhile[I](f: I => Boolean): Process[I,I] = 
+      Await {
+        case Some(i) if f(i) => Emit(i, takeWhile(f))
+        case _ => Halt()
+      }
 
-    def dropWhile[I](f: I => Boolean): Process[I,I] = ???
+    def dropWhile[I](f: I => Boolean): Process[I,I] =
+      Await {
+        case Some(i) if f(i) => dropWhile(f)
+        case _ => id
+      }
 
     /* The identity `Process`, just repeatedly echos its input. */
     def id[I]: Process[I,I] = lift(identity)
@@ -306,7 +333,9 @@ object SimpleStreamTransducers {
     /*
      * Exercise 2: Implement `count`.
      */
-    def count[I]: Process[I,Int] = ???
+    def count[I]: Process[I,Int] = {
+      ???
+    }
 
     /* For comparison, here is an explicit recursive implementation. */
     def count2[I]: Process[I,Int] = {
@@ -318,7 +347,11 @@ object SimpleStreamTransducers {
     /*
      * Exercise 3: Implement `mean`.
      */
-    def mean: Process[Double,Double] = ???
+    def mean: Process[Double,Double] = {
+      def go(count: Double, acc: Double): Process[Double, Double] =
+        await((i: Double) => emit(((acc + i) / (count + 1.0)), go(count + 1.0, acc + i)))
+      go(0.0, 0.0)
+    }
 
     def loop[S,I,O](z: S)(f: (I,S) => (O,S)): Process[I,O] =
       await((i: I) => f(i,z) match {
